@@ -276,14 +276,15 @@ async function salvarBlocoAPI(
   // ---------- render ----------
   async function loadOptions() {
 
-  // Inicializa as listas de sugestões
+  // Começa com as opções já existentes no sistema
   optionsCache = {
-    locais: [],
-    atividades: []
+    locais: [...DEFAULT_LOCAIS],
+    atividades: [...DEFAULT_ATIVIDADES]
   };
 
   try {
 
+    // Acrescenta também as opções gravadas no PostgreSQL
     const resposta = await fetch('/api/opcoes');
 
     if (!resposta.ok) {
@@ -331,9 +332,13 @@ async function salvarBlocoAPI(
 
     });
 
-    console.log(
-      'Opções carregadas do PostgreSQL:',
-      optionsCache
+    // Ordena as sugestões
+    optionsCache.locais.sort((a, b) =>
+      a.localeCompare(b, 'pt-BR')
+    );
+
+    optionsCache.atividades.sort((a, b) =>
+      a.localeCompare(b, 'pt-BR')
     );
 
   } catch (error) {
