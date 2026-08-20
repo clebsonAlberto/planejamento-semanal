@@ -279,7 +279,7 @@ async function salvarBlocoAPI(
   // Começa com as opções já existentes no sistema
   optionsCache = {
     locais: [...DEFAULT_LOCAIS],
-    atividades: [...DEFAULT_ATIVIDADES]
+    atividades: [...DEFAULT_PROPOSTAS]
   };
 
   try {
