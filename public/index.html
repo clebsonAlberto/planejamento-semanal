@@ -16,10 +16,63 @@
      além do contêiner onde os dias são montados. -->
 
 <header class="top">
+
+  <div class="planner-info">
+
+  <div class="info-row">
+    <label for="professora">Professora:</label>
+    <input
+      type="text"
+      id="professora"
+      placeholder="Nome da professora"
+    >
+  </div>
+
+  <div class="info-row">
+    <label for="turma">Turma:</label>
+    <input
+      type="text"
+      id="turma"
+      placeholder="Ex.: Infantil II B"
+    >
+  </div>
+
+  <div class="info-row periodo-row">
+    <span class="info-label">Período:</span>
+
+    <label class="periodo-option">
+      <input
+        type="radio"
+        name="periodo"
+        value="Manhã"
+        id="periodo-manha"
+      >
+      Manhã
+    </label>
+
+    <label class="periodo-option">
+      <input
+        type="radio"
+        name="periodo"
+        value="Tarde"
+        id="periodo-tarde"
+      >
+      Tarde
+    </label>
+  </div>
+
+  <div class="info-row escola-row">
+    <span class="info-label">Escola:</span>
+    <strong>EMEI Viriato Correia</strong>
+  </div>
+
+</div>
+
   <div class="top-row">
     <h1>Planejamento<span>Semanal</span></h1>
     <div class="save-status"><span class="dot" id="saveDot"></span><span id="saveText">salvo</span></div>
   </div>
+  
   <div class="top-row" style="margin-top:12px;">
     <div class="week-nav">
       <button class="ctrl" id="prevWeek">◀ semana</button>
