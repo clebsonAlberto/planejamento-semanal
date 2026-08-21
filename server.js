@@ -504,9 +504,135 @@ app.post('/api/opcoes', async (req, res) => {
     }
 });
 
+// =====================================================
+// CONFIGURAÇÕES DO CABEÇALHO
+// Professora, turma, período e escola
+// =====================================================
 
+// Buscar configurações
+app.get('/api/configuracoes', async (req, res) => {
+  try {
+
+    const resultado = await pool.query(`
+      SELECT
+        id,
+        professora,
+        turma,
+        periodo,
+        escola
+      FROM configuracoes
+      ORDER BY id DESC
+      LIMIT 1
+    `);
+
+    if (resultado.rows.length === 0) {
+      return res.json({
+        sucesso: true,
+        configuracao: {
+          professora: '',
+          turma: '',
+          periodo: '',
+          escola: 'EMEI Viriato Correia'
+        }
+      });
+    }
+
+    res.json({
+      sucesso: true,
+      configuracao: resultado.rows[0]
+    });
+
+  } catch (error) {
+
+    console.error('Erro ao carregar configurações:', error);
+
+    res.status(500).json({
+      sucesso: false,
+      mensagem: 'Erro ao carregar configurações.'
+    });
+  }
+});
+
+
+// Salvar configurações
+app.post('/api/configuracoes', async (req, res) => {
+  try {
+
+    const {
+      professora,
+      turma,
+      periodo
+    } = req.body;
+
+    const escola = 'EMEI Viriato Correia';
+
+    // Procura uma configuração existente
+    const existente = await pool.query(`
+      SELECT id
+      FROM configuracoes
+      ORDER BY id DESC
+      LIMIT 1
+    `);
+
+    let resultado;
+
+    if (existente.rows.length > 0) {
+
+      const id = existente.rows[0].id;
+
+      resultado = await pool.query(`
+        UPDATE configuracoes
+        SET
+          professora = $1,
+          turma = $2,
+          periodo = $3,
+          escola = $4,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = $5
+        RETURNING *
+      `, [
+        professora || '',
+        turma || '',
+        periodo || '',
+        escola,
+        id
+      ]);
+
+    } else {
+
+      resultado = await pool.query(`
+        INSERT INTO configuracoes
+          (professora, turma, periodo, escola)
+        VALUES
+          ($1, $2, $3, $4)
+        RETURNING *
+      `, [
+        professora || '',
+        turma || '',
+        periodo || '',
+        escola
+      ]);
+    }
+
+    res.json({
+      sucesso: true,
+      mensagem: 'Configurações salvas com sucesso!',
+      configuracao: resultado.rows[0]
+    });
+
+  } catch (error) {
+
+    console.error('Erro ao salvar configurações:', error);
+
+    res.status(500).json({
+      sucesso: false,
+      mensagem: 'Erro ao salvar configurações.'
+    });
+  }
+});
 
 // Inicia o servidor
 app.listen(PORT, () => {
     console.log(`✅ Servidor rodando em http://localhost:${PORT}`);
 });
+

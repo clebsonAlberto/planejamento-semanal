@@ -25,6 +25,11 @@
     daysContainer: document.getElementById('daysContainer'),
     saveDot: document.getElementById('saveDot'),
     saveText: document.getElementById('saveText'),
+
+    professora: document.getElementById('professora'),
+    turma: document.getElementById('turma'),
+    periodoManha: document.getElementById('periodo-manha'),
+    periodoTarde: document.getElementById('periodo-tarde'),
   };
 
   // ---------- date / week helpers ----------
@@ -898,6 +903,78 @@ els.printBtn.addEventListener(
   () => window.print()
 );
 
+// ---------- configurações do cabeçalho ----------
+
+async function carregarConfiguracoes() {
+  try {
+    const resposta = await fetch('/api/configuracoes');
+
+    if (!resposta.ok) {
+      throw new Error('Erro ao carregar configurações');
+    }
+
+    const dados = await resposta.json();
+    const config = dados.configuracao || {};
+
+    els.professora.value = config.professora || '';
+    els.turma.value = config.turma || '';
+
+    els.periodoManha.checked =
+      config.periodo === 'Manhã';
+
+    els.periodoTarde.checked =
+      config.periodo === 'Tarde';
+
+  } catch (error) {
+    console.error(
+      'Erro ao carregar configurações:',
+      error
+    );
+  }
+}
+
+
+async function salvarConfiguracoes() {
+  try {
+    let periodo = '';
+
+    if (els.periodoManha.checked) {
+      periodo = 'Manhã';
+    }
+
+    if (els.periodoTarde.checked) {
+      periodo = 'Tarde';
+    }
+
+    const resposta = await fetch('/api/configuracoes', {
+      method: 'POST',
+
+      headers: {
+        'Content-Type': 'application/json'
+      },
+
+      body: JSON.stringify({
+        professora: els.professora.value.trim(),
+        turma: els.turma.value.trim(),
+        periodo: periodo
+      })
+    });
+
+    if (!resposta.ok) {
+      throw new Error('Erro ao salvar configurações');
+    }
+
+    console.log('Configurações salvas com sucesso.');
+
+  } catch (error) {
+    console.error(
+      'Erro ao salvar configurações:',
+      error
+    );
+  }
+}
+
+
 
 // ---------- inicialização ----------
 
@@ -917,13 +994,40 @@ els.printBtn.addEventListener(
     semanaSalva || semanaAtual;
 
   els.weekPicker.value =
-    semanaInicial;
+  semanaInicial;
 
-  await loadOptions();
+// Carrega os dados do cabeçalho
+await carregarConfiguracoes();
 
-  await loadWeek(
-    semanaInicial
-  );
+// Carrega locais e propostas
+await loadOptions();
+
+// Carrega a semana
+await loadWeek(
+  semanaInicial
+);
+
+// Salvar cabeçalho quando houver alteração
+
+els.professora.addEventListener(
+  'change',
+  salvarConfiguracoes
+);
+
+els.turma.addEventListener(
+  'change',
+  salvarConfiguracoes
+);
+
+els.periodoManha.addEventListener(
+  'change',
+  salvarConfiguracoes
+);
+
+els.periodoTarde.addEventListener(
+  'change',
+  salvarConfiguracoes
+);
 
 })();
 
