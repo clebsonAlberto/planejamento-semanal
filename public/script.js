@@ -8,7 +8,7 @@
   ];
 
   const DEFAULT_LOCAIS = ['SALA DE REFERÊNCIA','QUADRA','PÁTIO','REFEITÓRIO','CIRCUITO','HORTA','AZULEJO','ESTACIONAMENTO','RUA','PASSEIO','PARQUE','SALA MULTIUSO','CORREDOR LATERAL','QUINTAIS BRINCANTES'];
-  const DEFAULT_PROPOSTAS = ['Corpo e Movimento','Arte','Leitura','Roda de conversa','Aula de Música','Experiência Científica','Culinária','Degustação','Brincadeira Livre','Contextos de Aprendizagem','Brincadeira Dirigida','Brincadeira Simbólica','Leitura Simultânea','Aniversariante do Dia','Aniversariante do Mês','Escovação','Almoço','Lanche da Manhã','Lanche da Tarde','Vídeo','Calendário','Cardápio','Linha do tempo','Chamadinha'];
+  const DEFAULT_PROPOSTAS = ['Corpo e Movimento','Arte','Leitura','Roda de conversa','Aula de Música','Experiência Científica','Culinária','Degustação','Brincadeira Livre','Contextos de Aprendizagem','Brincadeira Dirigida','Brincadeira Simbólica','Leitura Simultânea','Aniversariante do Dia','Aniversariante do Mês','Escovação','Almoço','Lanche da Manhã','Lanche da Tarde','Vídeo','Calendário','Cardápio','Linha do tempo','Chamadinha','Chegada','Saída',];
   const BADGE_PALETTE = ['#E1783E','#D6588F','#7C5CBF','#4C7A6B','#3E7CB1','#C9A227','#B24C3E','#5C8A72'];
 
   let optionsCache = { locais: [...DEFAULT_LOCAIS], atividades: [...DEFAULT_PROPOSTAS] };
@@ -517,12 +517,54 @@ async function salvarBlocoAPI(
         <input class="local-badge-input" list="dl-locais" placeholder="LOCAL / DESTAQUE (ex: PARQUE)" value="${escapeHtml(block.local||'')}">
       </div>
       <div class="atividades-wrap">
-        <div class="tags"></div>
-        <input class="atividade-input" list="dl-atividades" placeholder="Digite uma atividade e pressione Enter">
-        <div class="hint-add">Enter para adicionar • clique no x para remover</div>
-      </div>
+  <div class="tags"></div>
+
+  <div class="atividade-add-wrap">
+    <input
+      class="atividade-input"
+      list="dl-atividades"
+      placeholder="Digite ou selecione uma proposta"
+    >
+    <button
+      type="button"
+      class="atividade-add-btn"
+      title="Adicionar proposta"
+    >+ Adicionar</button>
+  </div>
+
+  <div class="hint-add">
+    Selecione/digite uma proposta e clique em Adicionar
+  </div>
+</div>
       <textarea class="block-text" placeholder="Escreva aqui (tema, observações)...">${escapeHtml(block.texto||'')}</textarea>
     `;
+
+    // ---------- horários ----------
+
+    const inputInicio = el.querySelector('.t-start');
+    const inputFim = el.querySelector('.t-end');
+
+    // Mantém o objeto sincronizado enquanto o usuário altera
+    inputInicio.addEventListener('input', () => {
+      block.start = inputInicio.value;
+    });
+
+    inputFim.addEventListener('input', () => {
+      block.end = inputFim.value;
+    });
+
+    // Salva no PostgreSQL quando terminar a alteração
+    inputInicio.addEventListener('change', () => {
+  block.start = inputInicio.value;
+  persist();
+    });
+
+    inputFim.addEventListener('change', () => {
+      block.end = inputFim.value;
+    persist();
+    });
+
+    // ---------- local ----------
 
     const applyLocalStyle = (input) => {
       const c = badgeColorFor(input.value);
@@ -587,20 +629,62 @@ async function salvarBlocoAPI(
     renderTags();
 
     const ativInput = el.querySelector('.atividade-input');
-    ativInput.addEventListener('keydown', async (e) => {
-      if(e.key === 'Enter' || e.key === ','){
-        e.preventDefault();
-        const val = ativInput.value.trim();
-        if(val){
-          if(!block.atividades) block.atividades = [];
-          if(!block.atividades.some(a=>a.toLowerCase()===val.toLowerCase())) block.atividades.push(val);
-          await addOption('atividade', val);
-          ativInput.value = '';
-          renderTags();
-          persist(dayKey);
-        }
-      }
-    });
+    const ativAddBtn = el.querySelector('.atividade-add-btn');
+
+async function adicionarProposta() {
+
+  const val = ativInput.value.trim();
+
+  if (!val) return;
+
+  if (!block.atividades) {
+    block.atividades = [];
+  }
+
+  const existe = block.atividades.some(
+    a =>
+      a.toLowerCase() ===
+      val.toLowerCase()
+  );
+
+  if (!existe) {
+    block.atividades.push(val);
+  }
+
+  // Salva a proposta também nas opções
+  await addOption(
+    'atividade',
+    val
+  );
+
+  // Limpa o campo
+  ativInput.value = '';
+
+  // Atualiza as etiquetas
+  renderTags();
+
+  // Salva no PostgreSQL
+  persist();
+}
+
+// Botão + Adicionar
+ativAddBtn.addEventListener('click', async () => {
+  await adicionarProposta();
+});
+
+
+// COMPUTADOR:
+// Enter ou vírgula adiciona a proposta
+ativInput.addEventListener('keydown', async (e) => {
+
+  if (e.key === 'Enter' || e.key === ',') {
+
+    e.preventDefault();
+
+    await adicionarProposta();
+  }
+
+});
 
     return el;
   }

@@ -152,3 +152,70 @@
     main{padding:14px;}
     .day-col{min-width:250px;}
   }
+
+  /* ========================================
+   CAMPO DE PROPOSTAS
+   ======================================== */
+
+.atividade-add-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.atividade-add-wrap .atividade-input {
+  flex: 1;
+  min-width: 0;
+}
+
+
+/* Botão + Adicionar */
+
+.atividade-add-btn {
+  min-height: 42px;
+  padding: 8px 14px;
+
+  border: none;
+  border-radius: 8px;
+
+  background: #2b2a28;
+  color: white;
+
+  font-size: 14px;
+  font-weight: 600;
+
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.atividade-add-btn:hover {
+  opacity: 0.9;
+}
+
+.atividade-add-btn:active {
+  transform: scale(0.97);
+}
+
+
+/* ========================================
+   CELULAR
+   ======================================== */
+
+@media (max-width: 600px) {
+
+  .atividade-add-wrap {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .atividade-add-wrap .atividade-input {
+    width: 100%;
+  }
+
+  .atividade-add-btn {
+    width: 100%;
+    min-height: 44px;
+    font-size: 15px;
+  }
+}
