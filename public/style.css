@@ -140,13 +140,299 @@
 
   footer{padding:6px 24px 30px; font-size:11.5px; color:var(--ink-soft2); text-align:center;}
 
-  @media print{
-    header.top{position:static;}
-    .week-nav button, .save-status, .add-block-btn, .remove-block, footer{display:none !important;}
-    main{overflow:visible;}
-    body{background:#fff;}
-    .day-col{break-inside:avoid;}
+  /* ========================================
+   IMPRESSÃO / PDF - A4 HORIZONTAL
+   ======================================== */
+
+@media print {
+
+  @page {
+    size: A4 landscape;
+    margin: 6mm;
   }
+
+  html,
+  body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    font-size: 10px;
+  }
+
+  header.top {
+    position: static;
+    padding: 0 0 6px 0;
+    margin: 0;
+    border-bottom: 1px solid #999;
+  }
+
+  .top-row {
+    display: block;
+  }
+
+  h1 {
+    font-size: 16px;
+    margin: 3px 0 5px;
+  }
+
+  /* Esconde controles que não precisam aparecer */
+  .week-nav button,
+  .save-status,
+  .add-block-btn,
+  .remove-block,
+  .atividade-add-wrap,
+  .hint-add,
+  footer {
+    display: none !important;
+  }
+
+  /* Cabeçalho professora / turma / período / escola */
+  .planner-info {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr 1fr 1.2fr;
+    gap: 5px 10px;
+    margin: 0 0 5px 0;
+  }
+
+  .info-row {
+    gap: 4px;
+    font-size: 9px;
+  }
+
+  .info-row label,
+  .info-label,
+  .escola-row strong {
+    font-size: 9px;
+  }
+
+  .info-row input[type="text"] {
+    border: none;
+    border-bottom: 1px solid #777;
+    border-radius: 0;
+    padding: 1px 3px;
+    font-size: 9px;
+  }
+
+  .periodo-option {
+    font-size: 9px;
+  }
+
+  /* Navegação da semana */
+  .week-nav {
+    margin-top: 3px;
+  }
+
+  .week-nav input[type="week"] {
+    border: none;
+    padding: 0;
+    font-size: 9px;
+  }
+
+  .range-label {
+    font-size: 9px;
+  }
+
+  /* Cinco dias ocupando toda a folha */
+  main {
+  width: 100%;
+  min-height: 0 !important;
+  height: auto !important;
+
+  display: grid !important;
+  grid-template-columns: repeat(5, 1fr);
+
+  gap: 3px;
+
+  padding: 5px 0 0;
+  margin: 0;
+
+  overflow: visible;
+
+  break-before: avoid !important;
+  page-break-before: avoid !important;
+  }
+
+  .day-col {
+  min-width: 0 !important;
+  max-width: none !important;
+  width: auto !important;
+
+  border-radius: 4px;
+  border: 1px solid #999;
+  }
+
+  .day-head {
+    padding: 5px 6px;
+  }
+
+  .day-head .abbr {
+    font-size: 8px;
+  }
+
+  .day-head .full {
+    font-size: 10px;
+  }
+
+  .day-head .date {
+    font-size: 8px;
+  }
+
+  .blocks {
+  padding: 3px !important;
+  gap: 2px !important;
+  flex: 1 !important;
+  }
+
+  .empty-hint {
+    padding: 8px 3px;
+    font-size: 8px;
+  }
+
+  /* Cada horário */
+  .block {
+  padding: 3px !important;
+  margin: 0 !important;
+  border-radius: 4px !important;
+
+  /* permite aproveitar todo o espaço da página */
+  break-inside: auto !important;
+  page-break-inside: auto !important;
+
+  }
+
+  .block-time {
+  margin-bottom: 2px !important;
+  gap: 2px !important;
+}
+
+.local-wrap {
+  margin-bottom: 2px !important;
+}
+
+.atividades-wrap {
+  margin-bottom: 2px !important;
+}
+
+.tags {
+  gap: 1px !important;
+  margin-bottom: 1px !important;
+}
+
+.tag {
+  font-size: 6.5px !important;
+  padding: 1px 3px !important;
+}
+
+textarea.block-text {
+  min-height: 16px !important;
+  max-height: 30px !important;
+  height: auto !important;
+
+  padding: 1px 2px !important;
+
+  border: none !important;
+  resize: none !important;
+
+  font-size: 7px !important;
+  line-height: 1.1 !important;
+
+  overflow: hidden !important;
+  }
+
+  .block-time input[type="time"] {
+    border: none;
+    padding: 0;
+    width: 48px;
+    font-size: 8px;
+  }
+
+  .block-time .as {
+    font-size: 7px;
+  }
+
+  /* Local */
+  .local-wrap {
+    margin-bottom: 4px;
+  }
+
+  .local-badge-input {
+    padding: 3px 4px;
+    font-size: 8px;
+    border-radius: 4px;
+  }
+
+  /* Propostas */
+  .atividades-wrap {
+    margin-bottom: 4px;
+  }
+
+  .tags {
+    gap: 2px;
+    margin-bottom: 3px;
+  }
+
+  .tag {
+    font-size: 7px;
+    padding: 2px 4px;
+  }
+
+  .tag button {
+    display: none !important;
+  }
+
+  /* Observações */
+  textarea.block-text {
+    border: none;
+    padding: 2px;
+    min-height: 20px;
+    resize: none;
+    overflow: visible;
+    font-size: 8px;
+    line-height: 1.25;
+  }
+
+  /* Preservar cores */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+    /* Evita separar o cabeçalho da semana */
+  header.top {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  main {
+    break-before: avoid !important;
+    page-break-before: avoid !important;
+  }
+
+  /* Não força as colunas inteiras a irem para outra página */
+  .day-col {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  header.top {
+  break-after: avoid !important;
+  page-break-after: avoid !important;
+
+  }
+
+  header.top,
+  main {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  }
+
+  .empty-hint {
+  display: none !important;
+  }
+
+  }
+
   @media (max-width:640px){
     .top-row{flex-direction:column; align-items:flex-start;}
     main{padding:14px;}
