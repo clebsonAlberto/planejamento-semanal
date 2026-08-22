@@ -2,96 +2,428 @@
 <html lang="pt-BR">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Planejamento Semanal</title>
+  <!-- ========================================
+       CONFIGURAÇÕES BÁSICAS DA PÁGINA
+       ======================================== -->
 
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>
+    Planejamento Semanal
+  </title>
+
+
+  <!-- ========================================
+       ARQUIVO DE ESTILO
+       ======================================== -->
+
+  <link
+    rel="stylesheet"
+    href="style.css"
+  >
+
 </head>
+
 
 <body>
 
-    <!-- cabeçalho, navegação entre semanas, os botões Copiar semana anterior e Imprimir,
-     além do contêiner onde os dias são montados. -->
 
-<header class="top">
+  <!-- ========================================
+       TELA DE LOGIN
+       ======================================== -->
 
-  <div class="planner-info">
+  <section id="login-screen">
 
-  <div class="info-row">
-    <label for="professora">Professora:</label>
-    <input
-      type="text"
-      id="professora"
-      placeholder="Nome da professora"
-    >
-  </div>
+    <div class="login-card">
 
-  <div class="info-row">
-    <label for="turma">Turma:</label>
-    <input
-      type="text"
-      id="turma"
-      placeholder="Ex.: Infantil II B"
-    >
-  </div>
 
-  <div class="info-row periodo-row">
-    <span class="info-label">Período:</span>
+      <!-- ========================================
+           TÍTULO DO LOGIN
+           ======================================== -->
 
-    <label class="periodo-option">
+      <h2>
+        Planejamento Semanal
+      </h2>
+
+      <p class="login-subtitle">
+        Entre com seu usuário para acessar o sistema
+      </p>
+
+
+      <!-- ========================================
+           CAMPO DE E-MAIL
+           ======================================== -->
+
+      <label for="login-email">
+        E-mail
+      </label>
+
       <input
-        type="radio"
-        name="periodo"
-        value="Manhã"
-        id="periodo-manha"
+        type="email"
+        id="login-email"
+        placeholder="Digite seu e-mail"
+        autocomplete="username"
       >
-      Manhã
-    </label>
 
-    <label class="periodo-option">
+
+      <!-- ========================================
+           CAMPO DE SENHA
+           ======================================== -->
+
+      <label for="login-senha">
+        Senha
+      </label>
+
       <input
-        type="radio"
-        name="periodo"
-        value="Tarde"
-        id="periodo-tarde"
+        type="password"
+        id="login-senha"
+        placeholder="Digite sua senha"
+        autocomplete="current-password"
       >
-      Tarde
-    </label>
-  </div>
 
-  <div class="info-row escola-row">
-    <span class="info-label">Escola:</span>
-    <strong>EMEI Viriato Correia</strong>
-  </div>
 
-</div>
+      <!-- ========================================
+           BOTÃO ENTRAR
+           ======================================== -->
 
-  <div class="top-row">
-    <h1>Planejamento<span>Semanal</span></h1>
-    <div class="save-status"><span class="dot" id="saveDot"></span><span id="saveText">salvo</span></div>
-  </div>
-  
-  <div class="top-row" style="margin-top:12px;">
-    <div class="week-nav">
-      <button class="ctrl" id="prevWeek">◀ semana</button>
-      <input type="week" id="weekPicker">
-      <button class="ctrl" id="nextWeek">semana ▶</button>
-      <span class="range-label" id="rangeLabel"></span>
+      <button
+        type="button"
+        id="btn-login"
+      >
+        Entrar
+      </button>
+
+
+      <!-- ========================================
+           MENSAGEM DO LOGIN
+           ======================================== -->
+
+      <div
+        id="login-msg"
+        aria-live="polite"
+      ></div>
+
+
     </div>
-    <div class="week-nav">
-      <button class="ctrl" id="duplicateBtn">Copiar semana anterior</button>
-      <button class="ctrl primary" id="printBtn">Imprimir</button>
-    </div>
+
+  </section>
+
+
+  <!-- ========================================
+       SISTEMA PRINCIPAL
+       ======================================== -->
+
+  <div id="app-screen">
+
+
+    <!-- ========================================
+         CABEÇALHO DO PLANEJAMENTO
+         ======================================== -->
+
+    <header class="top">
+
+
+      <!-- ========================================
+           DADOS DA PROFESSORA / TURMA
+           ======================================== -->
+
+      <div class="planner-info">
+
+
+        <!-- ========================================
+             PROFESSORA
+             ======================================== -->
+
+        <div class="info-row">
+
+          <label for="professora">
+            Professora:
+          </label>
+
+          <input
+            type="text"
+            id="professora"
+            placeholder="Nome da professora"
+          >
+
+        </div>
+
+
+        <!-- ========================================
+             TURMA
+             ======================================== -->
+
+        <div class="info-row">
+
+          <label for="turma">
+            Turma:
+          </label>
+
+          <input
+            type="text"
+            id="turma"
+            placeholder="Ex.: Infantil II B"
+          >
+
+        </div>
+
+
+        <!-- ========================================
+             PERÍODO
+             ======================================== -->
+
+        <div class="info-row periodo-row">
+
+          <span class="info-label">
+            Período:
+          </span>
+
+
+          <!-- MANHÃ -->
+
+          <label class="periodo-option">
+
+            <input
+              type="radio"
+              name="periodo"
+              value="Manhã"
+              id="periodo-manha"
+            >
+
+            Manhã
+
+          </label>
+
+
+          <!-- TARDE -->
+
+          <label class="periodo-option">
+
+            <input
+              type="radio"
+              name="periodo"
+              value="Tarde"
+              id="periodo-tarde"
+            >
+
+            Tarde
+
+          </label>
+
+        </div>
+
+
+        <!-- ========================================
+             ESCOLA
+             ======================================== -->
+
+        <div class="info-row escola-row">
+
+          <span class="info-label">
+            Escola:
+          </span>
+
+          <strong>
+            EMEI Viriato Correia
+          </strong>
+
+        </div>
+
+
+      </div>
+
+
+      <!-- ========================================
+           TÍTULO / STATUS / USUÁRIO
+           ======================================== -->
+
+      <div class="top-row">
+
+
+        <!-- ========================================
+             TÍTULO DO SISTEMA
+             ======================================== -->
+
+        <h1>
+          Planejamento
+          <span>Semanal</span>
+        </h1>
+
+
+        <!-- ========================================
+             ÁREA DO USUÁRIO LOGADO
+             ======================================== -->
+
+        <div class="user-area">
+
+
+          <!-- ========================================
+               STATUS DE SALVAMENTO
+               ======================================== -->
+
+          <div class="save-status">
+
+            <span
+              class="dot"
+              id="saveDot"
+            ></span>
+
+            <span id="saveText">
+              salvo
+            </span>
+
+          </div>
+
+
+          <!-- ========================================
+               NOME / PERFIL DO USUÁRIO
+               ======================================== -->
+
+          <span id="usuario-logado"></span>
+
+
+          <!-- ========================================
+               BOTÃO SAIR
+               ======================================== -->
+
+          <button
+            type="button"
+            class="ctrl"
+            id="btn-logout"
+          >
+            Sair
+          </button>
+
+
+        </div>
+
+      </div>
+
+
+      <!-- ========================================
+           NAVEGAÇÃO ENTRE SEMANAS
+           ======================================== -->
+
+      <div
+        class="top-row"
+        style="margin-top:12px;"
+      >
+
+
+        <!-- ========================================
+             CONTROLES DE SEMANA
+             ======================================== -->
+
+        <div class="week-nav">
+
+          <button
+            class="ctrl"
+            id="prevWeek"
+          >
+            ◀ semana
+          </button>
+
+
+          <input
+            type="week"
+            id="weekPicker"
+          >
+
+
+          <button
+            class="ctrl"
+            id="nextWeek"
+          >
+            semana ▶
+          </button>
+
+
+          <span
+            class="range-label"
+            id="rangeLabel"
+          ></span>
+
+        </div>
+
+
+        <!-- ========================================
+             AÇÕES DA SEMANA
+             ======================================== -->
+
+        <div class="week-nav">
+
+
+          <!-- COPIAR SEMANA -->
+
+          <button
+            class="ctrl"
+            id="duplicateBtn"
+          >
+            Copiar semana anterior
+          </button>
+
+
+          <!-- IMPRIMIR -->
+
+          <button
+            class="ctrl primary"
+            id="printBtn"
+          >
+            Imprimir
+          </button>
+
+
+        </div>
+
+      </div>
+
+
+    </header>
+
+
+    <!-- ========================================
+         ÁREA DOS DIAS DA SEMANA
+         ======================================== -->
+
+    <main id="daysContainer">
+
+      <!--
+        Segunda, terça, quarta, quinta e sexta
+        são criadas automaticamente pelo script.js
+      -->
+
+    </main>
+
+
+    <!-- ========================================
+         RODAPÉ
+         ======================================== -->
+
+    <footer>
+
+      As opções de local/atividade digitadas
+      ficam salvas para sugestão nas próximas semanas.
+
+    </footer>
+
+
   </div>
-</header>
+  <!-- FIM DO SISTEMA PRINCIPAL -->
 
-<main id="daysContainer"></main>
 
-<footer>As opções de local/atividade digitadas ficam salvas para sugestão nas próximas semanas.</footer>    
+  <!-- ========================================
+       JAVASCRIPT
+       ======================================== -->
 
-<script src="script.js"></script>
+  <script src="script.js"></script>
+
 
 </body>
+
 </html>

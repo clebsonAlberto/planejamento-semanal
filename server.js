@@ -1,638 +1,1812 @@
-const express = require('express');
-const path = require('path');
-const pool = require('./db');
+/* ========================================
+   IMPORTAÇÕES
+   ======================================== */
 
-const app = express();
+const express =
+  require('express');
 
-const PORT = process.env.PORT || 3000;
+const path =
+  require('path');
 
-// Permite receber dados JSON
-app.use(express.json());
+const pool =
+  require('./db');
 
-// Disponibiliza os arquivos da pasta public
-app.use(express.static(path.join(__dirname, 'public')));
+const session =
+  require('express-session');
 
-// Rota principal
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+const bcrypt =
+  require('bcrypt');
 
-// Rota de teste para verificar a conexão com o banco de dados ProstgerSQL
-app.get('/api/teste-banco', async (req, res) => {
+
+/* ========================================
+   CONFIGURAÇÃO DO EXPRESS
+   ======================================== */
+
+const app =
+  express();
+
+const PORT =
+  process.env.PORT || 3000;
+
+
+/* ========================================
+   MIDDLEWARE - JSON
+   ======================================== */
+
+app.use(
+  express.json()
+);
+
+
+/* ========================================
+   ARQUIVOS ESTÁTICOS
+   ======================================== */
+
+app.use(
+  express.static(
+    path.join(
+      __dirname,
+      'public'
+    )
+  )
+);
+
+
+/* ========================================
+   ROTA PRINCIPAL
+   ======================================== */
+
+app.get(
+  '/',
+  (req, res) => {
+
+    res.sendFile(
+      path.join(
+        __dirname,
+        'public',
+        'index.html'
+      )
+    );
+
+  }
+);
+
+
+/* ========================================
+   CONFIGURAÇÃO DA SESSÃO
+   ======================================== */
+
+/*
+   A sessão permanece válida
+   por 8 horas.
+*/
+
+app.use(
+  session({
+
+    secret:
+      process.env.SESSION_SECRET ||
+      'planejamento-semanal-secret',
+
+    resave:
+      false,
+
+    saveUninitialized:
+      false,
+
+    cookie: {
+
+      maxAge:
+        1000 *
+        60 *
+        60 *
+        8
+
+    }
+
+  })
+);
+
+
+/* ========================================
+   TESTE DE CONEXÃO COM POSTGRESQL
+   ======================================== */
+
+app.get(
+  '/api/teste-banco',
+
+  async (req, res) => {
+
     try {
-        const resultado = await pool.query('SELECT NOW() AS agora');
 
-        res.json({
-            sucesso: true,
-            mensagem: 'PostgreSQL conectado com sucesso!',
-            horarioBanco: resultado.rows[0].agora
-        });
+      const resultado =
+        await pool.query(
+          'SELECT NOW() AS agora'
+        );
+
+
+      res.json({
+
+        sucesso:
+          true,
+
+        mensagem:
+          'PostgreSQL conectado com sucesso!',
+
+        horarioBanco:
+          resultado.rows[0].agora
+
+      });
+
 
     } catch (error) {
-        console.error('❌ Erro ao conectar ao PostgreSQL:', error);
 
-        res.status(500).json({
-            sucesso: false,
-            mensagem: 'Erro ao conectar ao PostgreSQL'
+      console.error(
+        '❌ Erro ao conectar ao PostgreSQL:',
+        error
+      );
+
+
+      res
+        .status(500)
+        .json({
+
+          sucesso:
+            false,
+
+          mensagem:
+            'Erro ao conectar ao PostgreSQL'
+
         });
-    }
-});
 
-app.post('/api/planejamentos', async (req, res) => {
+    }
+
+  }
+);
+
+
+/* ========================================
+   PLANEJAMENTOS
+   ======================================== */
+
+
+/* ========================================
+   SALVAR OU ATUALIZAR PLANEJAMENTO
+   ======================================== */
+
+app.post(
+  '/api/planejamentos',
+
+  async (req, res) => {
 
     const {
-        semana,
-        dia,
-        bloco_id,
-        hora_inicio,
-        hora_fim,
-        local,
-        observacao,
-        atividades
+
+      semana,
+      dia,
+      bloco_id,
+      hora_inicio,
+      hora_fim,
+      local,
+      observacao,
+      atividades
+
     } = req.body;
 
-    if (!semana || !dia || !bloco_id) {
-        return res.status(400).json({
-            sucesso: false,
-            mensagem: 'Semana, dia e bloco_id são obrigatórios.'
+
+    /* ========================================
+       VALIDAÇÃO DOS CAMPOS OBRIGATÓRIOS
+       ======================================== */
+
+    if (
+      !semana ||
+      !dia ||
+      !bloco_id
+    ) {
+
+      return res
+        .status(400)
+        .json({
+
+          sucesso:
+            false,
+
+          mensagem:
+            'Semana, dia e bloco_id são obrigatórios.'
+
         });
+
     }
 
-    const client = await pool.connect();
+
+    const client =
+      await pool.connect();
+
 
     try {
-        await client.query('BEGIN');
 
-        const resultado = await client.query(
-            `
+      /* ========================================
+         INICIAR TRANSAÇÃO
+         ======================================== */
+
+      await client.query(
+        'BEGIN'
+      );
+
+
+      /* ========================================
+         SALVAR O BLOCO
+         ======================================== */
+
+      const resultado =
+        await client.query(
+          `
             INSERT INTO planejamentos
             (
-                semana,
-                dia,
-                bloco_id,
-                hora_inicio,
-                hora_fim,
-                local,
-                observacao
+              semana,
+              dia,
+              bloco_id,
+              hora_inicio,
+              hora_fim,
+              local,
+              observacao
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
 
-            ON CONFLICT (semana, dia, bloco_id)
+            VALUES
+            (
+              $1,
+              $2,
+              $3,
+              $4,
+              $5,
+              $6,
+              $7
+            )
+
+            ON CONFLICT
+            (
+              semana,
+              dia,
+              bloco_id
+            )
 
             DO UPDATE SET
-                hora_inicio = EXCLUDED.hora_inicio,
-                hora_fim = EXCLUDED.hora_fim,
-                local = EXCLUDED.local,
-                observacao = EXCLUDED.observacao,
-                updated_at = CURRENT_TIMESTAMP
+
+              hora_inicio =
+                EXCLUDED.hora_inicio,
+
+              hora_fim =
+                EXCLUDED.hora_fim,
+
+              local =
+                EXCLUDED.local,
+
+              observacao =
+                EXCLUDED.observacao,
+
+              updated_at =
+                CURRENT_TIMESTAMP
 
             RETURNING id;
-            `,
-            [
-                semana,
-                dia,
-                bloco_id,
-                hora_inicio || null,
-                hora_fim || null,
-                local || null,
-                observacao || null
-            ]
+          `,
+          [
+
+            semana,
+            dia,
+            bloco_id,
+
+            hora_inicio ||
+              null,
+
+            hora_fim ||
+              null,
+
+            local ||
+              null,
+
+            observacao ||
+              null
+
+          ]
         );
 
-        const planejamentoId = resultado.rows[0].id;
 
-        await client.query(
-            'DELETE FROM atividades WHERE planejamento_id = $1',
-            [planejamentoId]
-        );
+      const planejamentoId =
+        resultado.rows[0].id;
 
-        if (Array.isArray(atividades)) {
-            for (const atividade of atividades) {
-                const texto = String(atividade).trim();
 
-                if (texto) {
-                    await client.query(
-                        `
-                        INSERT INTO atividades
-                        (planejamento_id, atividade)
-                        VALUES ($1, $2)
-                        `,
-                        [planejamentoId, texto]
-                    );
-                }
-            }
+      /* ========================================
+         REMOVER ATIVIDADES ANTIGAS
+         ======================================== */
+
+      await client.query(
+        `
+          DELETE FROM atividades
+          WHERE planejamento_id = $1
+        `,
+        [
+          planejamentoId
+        ]
+      );
+
+
+      /* ========================================
+         SALVAR PROPOSTAS / ATIVIDADES
+         ======================================== */
+
+      if (
+        Array.isArray(
+          atividades
+        )
+      ) {
+
+        for (
+          const atividade
+          of atividades
+        ) {
+
+          const texto =
+            String(
+              atividade
+            ).trim();
+
+
+          if (texto) {
+
+            await client.query(
+              `
+                INSERT INTO atividades
+                (
+                  planejamento_id,
+                  atividade
+                )
+
+                VALUES
+                (
+                  $1,
+                  $2
+                )
+              `,
+              [
+                planejamentoId,
+                texto
+              ]
+            );
+
+          }
+
         }
 
-        await client.query('COMMIT');
+      }
 
-        res.json({
-            sucesso: true,
-            mensagem: 'Planejamento salvo com sucesso!',
-            id: planejamentoId
-        });
+
+      /* ========================================
+         CONFIRMAR TRANSAÇÃO
+         ======================================== */
+
+      await client.query(
+        'COMMIT'
+      );
+
+
+      res.json({
+
+        sucesso:
+          true,
+
+        mensagem:
+          'Planejamento salvo com sucesso!',
+
+        id:
+          planejamentoId
+
+      });
+
 
     } catch (error) {
-        await client.query('ROLLBACK');
 
-        console.error('❌ Erro ao salvar planejamento:', error);
+      /* ========================================
+         CANCELAR TRANSAÇÃO EM CASO DE ERRO
+         ======================================== */
 
-        res.status(500).json({
-            sucesso: false,
-            mensagem: 'Erro ao salvar planejamento.'
+      await client.query(
+        'ROLLBACK'
+      );
+
+
+      console.error(
+        '❌ Erro ao salvar planejamento:',
+        error
+      );
+
+
+      res
+        .status(500)
+        .json({
+
+          sucesso:
+            false,
+
+          mensagem:
+            'Erro ao salvar planejamento.'
+
         });
+
 
     } finally {
-        client.release();
+
+      client.release();
+
     }
-});
 
-// ======================================================
-// COPIAR PLANEJAMENTOS DA SEMANA ANTERIOR
-// ======================================================
+  }
+);
 
-app.post('/api/planejamentos/copiar-semana', async (req, res) => {
+
+/* ========================================
+   COPIAR PLANEJAMENTOS DA SEMANA ANTERIOR
+   ======================================== */
+
+app.post(
+  '/api/planejamentos/copiar-semana',
+
+  async (req, res) => {
 
     const {
-        semana_origem,
-        semana_destino
+
+      semana_origem,
+      semana_destino
+
     } = req.body;
 
-    if (!semana_origem || !semana_destino) {
-        return res.status(400).json({
-            sucesso: false,
-            mensagem: 'Semana de origem e semana de destino são obrigatórias.'
+
+    /* ========================================
+       VALIDAR SEMANAS
+       ======================================== */
+
+    if (
+      !semana_origem ||
+      !semana_destino
+    ) {
+
+      return res
+        .status(400)
+        .json({
+
+          sucesso:
+            false,
+
+          mensagem:
+            'Semana de origem e semana de destino são obrigatórias.'
+
         });
+
     }
 
-    // Impede copiar uma semana para ela mesma
-    if (semana_origem === semana_destino) {
-        return res.status(400).json({
-            sucesso: false,
-            mensagem: 'A semana de origem deve ser diferente da semana de destino.'
+
+    /* ========================================
+       IMPEDIR CÓPIA PARA A MESMA SEMANA
+       ======================================== */
+
+    if (
+      semana_origem ===
+      semana_destino
+    ) {
+
+      return res
+        .status(400)
+        .json({
+
+          sucesso:
+            false,
+
+          mensagem:
+            'A semana de origem deve ser diferente da semana de destino.'
+
         });
+
     }
 
-    const client = await pool.connect();
+
+    const client =
+      await pool.connect();
+
 
     try {
 
-        await client.query('BEGIN');
+      /* ========================================
+         INICIAR TRANSAÇÃO
+         ======================================== */
 
-        // --------------------------------------------------
-        // 1. Busca todos os planejamentos da semana anterior
-        // --------------------------------------------------
+      await client.query(
+        'BEGIN'
+      );
 
-        const planejamentosOrigem = await client.query(
-            `
+
+      /* ========================================
+         BUSCAR PLANEJAMENTOS DA SEMANA ANTERIOR
+         ======================================== */
+
+      const planejamentosOrigem =
+        await client.query(
+          `
             SELECT
-                id,
+              id,
+              dia,
+              bloco_id,
+              hora_inicio,
+              hora_fim,
+              local,
+              observacao
+
+            FROM planejamentos
+
+            WHERE semana = $1
+
+            ORDER BY
+              dia,
+              hora_inicio
+          `,
+          [
+            semana_origem
+          ]
+        );
+
+
+      /* ========================================
+         VERIFICAR SE EXISTEM PLANEJAMENTOS
+         ======================================== */
+
+      if (
+        planejamentosOrigem
+          .rows
+          .length === 0
+      ) {
+
+        await client.query(
+          'ROLLBACK'
+        );
+
+
+        return res
+          .status(404)
+          .json({
+
+            sucesso:
+              false,
+
+            mensagem:
+              'Nenhum planejamento encontrado na semana anterior.'
+
+          });
+
+      }
+
+
+      let totalCopiados =
+        0;
+
+
+      /* ========================================
+         PERCORRER PLANEJAMENTOS
+         ======================================== */
+
+      for (
+        const planejamento
+        of planejamentosOrigem.rows
+      ) {
+
+
+        /* ========================================
+           CRIAR OU ATUALIZAR NO DESTINO
+           ======================================== */
+
+        const resultado =
+          await client.query(
+            `
+              INSERT INTO planejamentos
+              (
+                semana,
                 dia,
                 bloco_id,
                 hora_inicio,
                 hora_fim,
                 local,
                 observacao
-            FROM planejamentos
-            WHERE semana = $1
-            ORDER BY dia, hora_inicio
+              )
+
+              VALUES
+              (
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                $7
+              )
+
+              ON CONFLICT
+              (
+                semana,
+                dia,
+                bloco_id
+              )
+
+              DO UPDATE SET
+
+                hora_inicio =
+                  EXCLUDED.hora_inicio,
+
+                hora_fim =
+                  EXCLUDED.hora_fim,
+
+                local =
+                  EXCLUDED.local,
+
+                observacao =
+                  EXCLUDED.observacao,
+
+                updated_at =
+                  CURRENT_TIMESTAMP
+
+              RETURNING id
             `,
-            [semana_origem]
+            [
+
+              semana_destino,
+              planejamento.dia,
+              planejamento.bloco_id,
+              planejamento.hora_inicio,
+              planejamento.hora_fim,
+              planejamento.local,
+              planejamento.observacao
+
+            ]
+          );
+
+
+        const novoPlanejamentoId =
+          resultado.rows[0].id;
+
+
+        /* ========================================
+           LIMPAR ATIVIDADES DO DESTINO
+           ======================================== */
+
+        await client.query(
+          `
+            DELETE FROM atividades
+            WHERE planejamento_id = $1
+          `,
+          [
+            novoPlanejamentoId
+          ]
         );
 
-        if (planejamentosOrigem.rows.length === 0) {
 
-            await client.query('ROLLBACK');
+        /* ========================================
+           BUSCAR ATIVIDADES DA ORIGEM
+           ======================================== */
 
-            return res.status(404).json({
-                sucesso: false,
-                mensagem: 'Nenhum planejamento encontrado na semana anterior.'
-            });
+        const atividadesOrigem =
+          await client.query(
+            `
+              SELECT atividade
+
+              FROM atividades
+
+              WHERE planejamento_id = $1
+
+              ORDER BY id
+            `,
+            [
+              planejamento.id
+            ]
+          );
+
+
+        /* ========================================
+           COPIAR ATIVIDADES
+           ======================================== */
+
+        for (
+          const atividade
+          of atividadesOrigem.rows
+        ) {
+
+          await client.query(
+            `
+              INSERT INTO atividades
+              (
+                planejamento_id,
+                atividade
+              )
+
+              VALUES
+              (
+                $1,
+                $2
+              )
+            `,
+            [
+              novoPlanejamentoId,
+              atividade.atividade
+            ]
+          );
+
         }
 
-        let totalCopiados = 0;
 
-        // --------------------------------------------------
-        // 2. Percorre os planejamentos encontrados
-        // --------------------------------------------------
+        totalCopiados++;
 
-        for (const planejamento of planejamentosOrigem.rows) {
+      }
 
-            // Cria ou atualiza o planejamento na semana destino
-            const resultado = await client.query(
-                `
-                INSERT INTO planejamentos
-                (
-                    semana,
-                    dia,
-                    bloco_id,
-                    hora_inicio,
-                    hora_fim,
-                    local,
-                    observacao
-                )
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
 
-                ON CONFLICT (semana, dia, bloco_id)
+      /* ========================================
+         CONFIRMAR TRANSAÇÃO
+         ======================================== */
 
-                DO UPDATE SET
-                    hora_inicio = EXCLUDED.hora_inicio,
-                    hora_fim = EXCLUDED.hora_fim,
-                    local = EXCLUDED.local,
-                    observacao = EXCLUDED.observacao,
-                    updated_at = CURRENT_TIMESTAMP
+      await client.query(
+        'COMMIT'
+      );
 
-                RETURNING id
-                `,
-                [
-                    semana_destino,
-                    planejamento.dia,
-                    planejamento.bloco_id,
-                    planejamento.hora_inicio,
-                    planejamento.hora_fim,
-                    planejamento.local,
-                    planejamento.observacao
-                ]
-            );
 
-            const novoPlanejamentoId = resultado.rows[0].id;
+      res.json({
 
-            // --------------------------------------------------
-            // 3. Limpa atividades existentes no destino
-            // --------------------------------------------------
+        sucesso:
+          true,
 
-            await client.query(
-                `
-                DELETE FROM atividades
-                WHERE planejamento_id = $1
-                `,
-                [novoPlanejamentoId]
-            );
+        mensagem:
+          'Semana anterior copiada com sucesso!',
 
-            // --------------------------------------------------
-            // 4. Busca atividades do planejamento original
-            // --------------------------------------------------
+        semana_origem,
+        semana_destino,
+        totalCopiados
 
-            const atividadesOrigem = await client.query(
-                `
-                SELECT atividade
-                FROM atividades
-                WHERE planejamento_id = $1
-                ORDER BY id
-                `,
-                [planejamento.id]
-            );
+      });
 
-            // --------------------------------------------------
-            // 5. Copia as atividades
-            // --------------------------------------------------
-
-            for (const atividade of atividadesOrigem.rows) {
-
-                await client.query(
-                    `
-                    INSERT INTO atividades
-                    (
-                        planejamento_id,
-                        atividade
-                    )
-                    VALUES ($1, $2)
-                    `,
-                    [
-                        novoPlanejamentoId,
-                        atividade.atividade
-                    ]
-                );
-            }
-
-            totalCopiados++;
-        }
-
-        await client.query('COMMIT');
-
-        res.json({
-            sucesso: true,
-            mensagem: 'Semana anterior copiada com sucesso!',
-            semana_origem,
-            semana_destino,
-            totalCopiados
-        });
 
     } catch (error) {
 
-        await client.query('ROLLBACK');
+      /* ========================================
+         CANCELAR TRANSAÇÃO
+         ======================================== */
 
-        console.error(
-            '❌ Erro ao copiar semana:',
-            error
-        );
+      await client.query(
+        'ROLLBACK'
+      );
 
-        res.status(500).json({
-            sucesso: false,
-            mensagem: 'Erro ao copiar semana.'
+
+      console.error(
+        '❌ Erro ao copiar semana:',
+        error
+      );
+
+
+      res
+        .status(500)
+        .json({
+
+          sucesso:
+            false,
+
+          mensagem:
+            'Erro ao copiar semana.'
+
         });
+
 
     } finally {
 
-        client.release();
+      client.release();
+
     }
-});
 
-// Buscar todos os planejamentos de uma semana
-app.get('/api/planejamentos/:semana', async (req, res) => {
+  }
+);
 
-    const { semana } = req.params;
+/* ========================================
+   BUSCAR PLANEJAMENTOS DE UMA SEMANA
+   ======================================== */
+
+app.get(
+  '/api/planejamentos/:semana',
+
+  async (req, res) => {
+
+    const {
+      semana
+    } = req.params;
+
 
     try {
 
-        const resultado = await pool.query(
-            `
+      const resultado =
+        await pool.query(
+          `
             SELECT
-                p.id,
-                p.semana,
-                p.dia,
-                p.bloco_id,
-                p.hora_inicio,
-                p.hora_fim,
-                p.local,
-                p.observacao,
-                COALESCE(
-                    json_agg(
-                        a.atividade
-                        ORDER BY a.id
-                    ) FILTER (WHERE a.id IS NOT NULL),
-                    '[]'
-                ) AS atividades
+              p.id,
+              p.semana,
+              p.dia,
+              p.bloco_id,
+              p.hora_inicio,
+              p.hora_fim,
+              p.local,
+              p.observacao,
+
+              COALESCE(
+                json_agg(
+                  a.atividade
+                  ORDER BY a.id
+                )
+                FILTER (
+                  WHERE a.id IS NOT NULL
+                ),
+                '[]'
+              ) AS atividades
 
             FROM planejamentos p
 
             LEFT JOIN atividades a
-                ON a.planejamento_id = p.id
+              ON a.planejamento_id = p.id
 
             WHERE p.semana = $1
 
             GROUP BY p.id
 
             ORDER BY
-                p.dia,
-                p.hora_inicio;
-            `,
-            [semana]
+              p.dia,
+              p.hora_inicio;
+          `,
+          [
+            semana
+          ]
         );
 
-        res.json({
-            sucesso: true,
-            semana: semana,
-            planejamentos: resultado.rows
-        });
+
+      res.json({
+
+        sucesso:
+          true,
+
+        semana:
+          semana,
+
+        planejamentos:
+          resultado.rows
+
+      });
+
 
     } catch (error) {
 
-        console.error(
-            '❌ Erro ao buscar planejamentos:',
-            error
-        );
+      console.error(
+        '❌ Erro ao buscar planejamentos:',
+        error
+      );
 
-        res.status(500).json({
-            sucesso: false,
-            mensagem: 'Erro ao buscar planejamentos.'
+
+      res
+        .status(500)
+        .json({
+
+          sucesso:
+            false,
+
+          mensagem:
+            'Erro ao buscar planejamentos.'
+
         });
-    }
-});
 
-// Excluir um bloco do planejamento
-app.delete('/api/planejamentos/:semana/:dia/:blocoId', async (req, res) => {
-    const { semana, dia, blocoId } = req.params;
+    }
+
+  }
+);
+
+
+/* ========================================
+   EXCLUIR UM BLOCO DO PLANEJAMENTO
+   ======================================== */
+
+app.delete(
+  '/api/planejamentos/:semana/:dia/:blocoId',
+
+  async (req, res) => {
+
+    const {
+      semana,
+      dia,
+      blocoId
+    } = req.params;
+
 
     try {
-        const resultado = await pool.query(
-            `
+
+      const resultado =
+        await pool.query(
+          `
             DELETE FROM planejamentos
+
             WHERE semana = $1
               AND dia = $2
               AND bloco_id = $3
+
             RETURNING id
-            `,
-            [semana, dia, blocoId]
+          `,
+          [
+            semana,
+            dia,
+            blocoId
+          ]
         );
 
-        if (resultado.rowCount === 0) {
-            return res.status(404).json({
-                sucesso: false,
-                mensagem: 'Planejamento não encontrado.'
-            });
-        }
 
-        res.json({
-            sucesso: true,
-            mensagem: 'Planejamento excluído com sucesso!'
-        });
+      /* ========================================
+         VERIFICAR SE O BLOCO EXISTIA
+         ======================================== */
 
-    } catch (error) {
-        console.error('❌ Erro ao excluir planejamento:', error);
+      if (
+        resultado.rowCount === 0
+      ) {
 
-        res.status(500).json({
-            sucesso: false,
-            mensagem: 'Erro ao excluir planejamento.'
-        });
-    }
-});
+        return res
+          .status(404)
+          .json({
 
-// Buscar opções salvas
-app.get('/api/opcoes', async (req, res) => {
-    try {
-        const resultado = await pool.query(`
-            SELECT tipo, valor
-            FROM opcoes
-            ORDER BY tipo, valor
-        `);
+            sucesso:
+              false,
 
-        res.json({
-            sucesso: true,
-            opcoes: resultado.rows
-        });
+            mensagem:
+              'Planejamento não encontrado.'
 
-    } catch (error) {
-        console.error('❌ Erro ao buscar opções:', error);
+          });
 
-        res.status(500).json({
-            sucesso: false,
-            mensagem: 'Erro ao buscar opções.'
-        });
-    }
-});
+      }
 
 
-// Salvar uma nova opção
-app.post('/api/opcoes', async (req, res) => {
+      res.json({
 
-    const { tipo, valor } = req.body;
+        sucesso:
+          true,
 
-    if (!tipo || !valor) {
-        return res.status(400).json({
-            sucesso: false,
-            mensagem: 'Tipo e valor são obrigatórios.'
-        });
-    }
+        mensagem:
+          'Planejamento excluído com sucesso!'
 
-    try {
-        await pool.query(
-            `
-            INSERT INTO opcoes (tipo, valor)
-            VALUES ($1, $2)
-
-            ON CONFLICT (tipo, valor)
-            DO NOTHING
-            `,
-            [
-                tipo.trim(),
-                valor.trim()
-            ]
-        );
-
-        res.json({
-            sucesso: true,
-            mensagem: 'Opção salva com sucesso!'
-        });
-
-    } catch (error) {
-        console.error('❌ Erro ao salvar opção:', error);
-
-        res.status(500).json({
-            sucesso: false,
-            mensagem: 'Erro ao salvar opção.'
-        });
-    }
-});
-
-// =====================================================
-// CONFIGURAÇÕES DO CABEÇALHO
-// Professora, turma, período e escola
-// =====================================================
-
-// Buscar configurações
-app.get('/api/configuracoes', async (req, res) => {
-  try {
-
-    const resultado = await pool.query(`
-      SELECT
-        id,
-        professora,
-        turma,
-        periodo,
-        escola
-      FROM configuracoes
-      ORDER BY id DESC
-      LIMIT 1
-    `);
-
-    if (resultado.rows.length === 0) {
-      return res.json({
-        sucesso: true,
-        configuracao: {
-          professora: '',
-          turma: '',
-          periodo: '',
-          escola: 'EMEI Viriato Correia'
-        }
       });
+
+
+    } catch (error) {
+
+      console.error(
+        '❌ Erro ao excluir planejamento:',
+        error
+      );
+
+
+      res
+        .status(500)
+        .json({
+
+          sucesso:
+            false,
+
+          mensagem:
+            'Erro ao excluir planejamento.'
+
+        });
+
     }
 
-    res.json({
-      sucesso: true,
-      configuracao: resultado.rows[0]
-    });
-
-  } catch (error) {
-
-    console.error('Erro ao carregar configurações:', error);
-
-    res.status(500).json({
-      sucesso: false,
-      mensagem: 'Erro ao carregar configurações.'
-    });
   }
-});
+);
 
 
-// Salvar configurações
-app.post('/api/configuracoes', async (req, res) => {
-  try {
+/* ========================================
+   OPÇÕES DE LOCAL E PROPOSTAS
+   ======================================== */
+
+
+/* ========================================
+   BUSCAR OPÇÕES SALVAS
+   ======================================== */
+
+app.get(
+  '/api/opcoes',
+
+  async (req, res) => {
+
+    try {
+
+      const resultado =
+        await pool.query(
+          `
+            SELECT
+              tipo,
+              valor
+
+            FROM opcoes
+
+            ORDER BY
+              tipo,
+              valor
+          `
+        );
+
+
+      res.json({
+
+        sucesso:
+          true,
+
+        opcoes:
+          resultado.rows
+
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        '❌ Erro ao buscar opções:',
+        error
+      );
+
+
+      res
+        .status(500)
+        .json({
+
+          sucesso:
+            false,
+
+          mensagem:
+            'Erro ao buscar opções.'
+
+        });
+
+    }
+
+  }
+);
+
+
+/* ========================================
+   SALVAR NOVA OPÇÃO
+   ======================================== */
+
+app.post(
+  '/api/opcoes',
+
+  async (req, res) => {
 
     const {
-      professora,
-      turma,
-      periodo
+      tipo,
+      valor
     } = req.body;
 
-    const escola = 'EMEI Viriato Correia';
 
-    // Procura uma configuração existente
-    const existente = await pool.query(`
-      SELECT id
-      FROM configuracoes
-      ORDER BY id DESC
-      LIMIT 1
-    `);
+    /* ========================================
+       VALIDAR OPÇÃO
+       ======================================== */
 
-    let resultado;
+    if (
+      !tipo ||
+      !valor
+    ) {
 
-    if (existente.rows.length > 0) {
+      return res
+        .status(400)
+        .json({
 
-      const id = existente.rows[0].id;
+          sucesso:
+            false,
 
-      resultado = await pool.query(`
-        UPDATE configuracoes
-        SET
-          professora = $1,
-          turma = $2,
-          periodo = $3,
-          escola = $4,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = $5
-        RETURNING *
-      `, [
-        professora || '',
-        turma || '',
-        periodo || '',
-        escola,
-        id
-      ]);
+          mensagem:
+            'Tipo e valor são obrigatórios.'
 
-    } else {
+        });
 
-      resultado = await pool.query(`
-        INSERT INTO configuracoes
-          (professora, turma, periodo, escola)
-        VALUES
-          ($1, $2, $3, $4)
-        RETURNING *
-      `, [
-        professora || '',
-        turma || '',
-        periodo || '',
-        escola
-      ]);
     }
 
-    res.json({
-      sucesso: true,
-      mensagem: 'Configurações salvas com sucesso!',
-      configuracao: resultado.rows[0]
-    });
 
-  } catch (error) {
+    try {
 
-    console.error('Erro ao salvar configurações:', error);
+      await pool.query(
+        `
+          INSERT INTO opcoes
+          (
+            tipo,
+            valor
+          )
 
-    res.status(500).json({
-      sucesso: false,
-      mensagem: 'Erro ao salvar configurações.'
-    });
+          VALUES
+          (
+            $1,
+            $2
+          )
+
+          ON CONFLICT
+          (
+            tipo,
+            valor
+          )
+
+          DO NOTHING
+        `,
+        [
+          tipo.trim(),
+          valor.trim()
+        ]
+      );
+
+
+      res.json({
+
+        sucesso:
+          true,
+
+        mensagem:
+          'Opção salva com sucesso!'
+
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        '❌ Erro ao salvar opção:',
+        error
+      );
+
+
+      res
+        .status(500)
+        .json({
+
+          sucesso:
+            false,
+
+          mensagem:
+            'Erro ao salvar opção.'
+
+        });
+
+    }
+
   }
-});
+);
 
-// Inicia o servidor
-app.listen(PORT, () => {
-    console.log(`✅ Servidor rodando em http://localhost:${PORT}`);
-});
 
+/* ========================================
+   CONFIGURAÇÕES DO CABEÇALHO
+   ======================================== */
+
+/*
+   Dados armazenados:
+
+   - Professora
+   - Turma
+   - Período
+   - Escola
+*/
+
+
+/* ========================================
+   BUSCAR CONFIGURAÇÕES
+   ======================================== */
+
+app.get(
+  '/api/configuracoes',
+
+  async (req, res) => {
+
+    try {
+
+      const resultado =
+        await pool.query(
+          `
+            SELECT
+              id,
+              professora,
+              turma,
+              periodo,
+              escola
+
+            FROM configuracoes
+
+            ORDER BY id DESC
+
+            LIMIT 1
+          `
+        );
+
+
+      /* ========================================
+         NENHUMA CONFIGURAÇÃO CADASTRADA
+         ======================================== */
+
+      if (
+        resultado.rows.length === 0
+      ) {
+
+        return res.json({
+
+          sucesso:
+            true,
+
+          configuracao: {
+
+            professora:
+              '',
+
+            turma:
+              '',
+
+            periodo:
+              '',
+
+            escola:
+              'EMEI Viriato Correia'
+
+          }
+
+        });
+
+      }
+
+
+      /* ========================================
+         RETORNAR CONFIGURAÇÃO ENCONTRADA
+         ======================================== */
+
+      res.json({
+
+        sucesso:
+          true,
+
+        configuracao:
+          resultado.rows[0]
+
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        'Erro ao carregar configurações:',
+        error
+      );
+
+
+      res
+        .status(500)
+        .json({
+
+          sucesso:
+            false,
+
+          mensagem:
+            'Erro ao carregar configurações.'
+
+        });
+
+    }
+
+  }
+);
+
+
+/* ========================================
+   SALVAR CONFIGURAÇÕES
+   ======================================== */
+
+app.post(
+  '/api/configuracoes',
+
+  async (req, res) => {
+
+    try {
+
+      const {
+
+        professora,
+        turma,
+        periodo
+
+      } = req.body;
+
+
+      /* ========================================
+         ESCOLA PADRÃO
+         ======================================== */
+
+      const escola =
+        'EMEI Viriato Correia';
+
+
+      /* ========================================
+         PROCURAR CONFIGURAÇÃO EXISTENTE
+         ======================================== */
+
+      const existente =
+        await pool.query(
+          `
+            SELECT id
+
+            FROM configuracoes
+
+            ORDER BY id DESC
+
+            LIMIT 1
+          `
+        );
+
+
+      let resultado;
+
+
+      /* ========================================
+         ATUALIZAR CONFIGURAÇÃO EXISTENTE
+         ======================================== */
+
+      if (
+        existente.rows.length > 0
+      ) {
+
+        const id =
+          existente.rows[0].id;
+
+
+        resultado =
+          await pool.query(
+            `
+              UPDATE configuracoes
+
+              SET
+                professora = $1,
+                turma = $2,
+                periodo = $3,
+                escola = $4,
+                updated_at = CURRENT_TIMESTAMP
+
+              WHERE id = $5
+
+              RETURNING *
+            `,
+            [
+              professora || '',
+              turma || '',
+              periodo || '',
+              escola,
+              id
+            ]
+          );
+
+
+      } else {
+
+
+        /* ========================================
+           CRIAR PRIMEIRA CONFIGURAÇÃO
+           ======================================== */
+
+        resultado =
+          await pool.query(
+            `
+              INSERT INTO configuracoes
+              (
+                professora,
+                turma,
+                periodo,
+                escola
+              )
+
+              VALUES
+              (
+                $1,
+                $2,
+                $3,
+                $4
+              )
+
+              RETURNING *
+            `,
+            [
+              professora || '',
+              turma || '',
+              periodo || '',
+              escola
+            ]
+          );
+
+      }
+
+
+      /* ========================================
+         CONFIGURAÇÃO SALVA
+         ======================================== */
+
+      res.json({
+
+        sucesso:
+          true,
+
+        mensagem:
+          'Configurações salvas com sucesso!',
+
+        configuracao:
+          resultado.rows[0]
+
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        'Erro ao salvar configurações:',
+        error
+      );
+
+
+      res
+        .status(500)
+        .json({
+
+          sucesso:
+            false,
+
+          mensagem:
+            'Erro ao salvar configurações.'
+
+        });
+
+    }
+
+  }
+);
+
+/* ========================================
+   LOGIN E SESSÃO
+   ======================================== */
+
+
+/* ========================================
+   LOGIN DO USUÁRIO
+   ======================================== */
+
+app.post(
+  '/api/login',
+
+  async (req, res) => {
+
+    try {
+
+      const {
+        email,
+        senha
+      } = req.body;
+
+
+      /* ========================================
+         VALIDAR CAMPOS
+         ======================================== */
+
+      if (
+        !email ||
+        !senha
+      ) {
+
+        return res
+          .status(400)
+          .json({
+
+            sucesso:
+              false,
+
+            mensagem:
+              'Informe email e senha.'
+
+          });
+
+      }
+
+
+      /* ========================================
+         BUSCAR USUÁRIO NO BANCO
+         ======================================== */
+
+      const resultado =
+        await pool.query(
+          `
+            SELECT
+              id,
+              nome,
+              email,
+              senha_hash,
+              perfil,
+              ativo
+
+            FROM usuarios
+
+            WHERE LOWER(email) =
+              LOWER($1)
+
+            LIMIT 1
+          `,
+          [
+            email.trim()
+          ]
+        );
+
+
+      /* ========================================
+         USUÁRIO NÃO ENCONTRADO
+         ======================================== */
+
+      if (
+        resultado.rows.length === 0
+      ) {
+
+        return res
+          .status(401)
+          .json({
+
+            sucesso:
+              false,
+
+            mensagem:
+              'Email ou senha inválidos.'
+
+          });
+
+      }
+
+
+      const usuario =
+        resultado.rows[0];
+
+
+      /* ========================================
+         VERIFICAR SE O USUÁRIO ESTÁ ATIVO
+         ======================================== */
+
+      if (
+        !usuario.ativo
+      ) {
+
+        return res
+          .status(403)
+          .json({
+
+            sucesso:
+              false,
+
+            mensagem:
+              'Usuário inativo.'
+
+          });
+
+      }
+
+
+      /* ========================================
+         COMPARAR SENHA COM BCRYPT
+         ======================================== */
+
+      const senhaCorreta =
+        await bcrypt.compare(
+          senha,
+          usuario.senha_hash
+        );
+
+
+      /* ========================================
+         SENHA INCORRETA
+         ======================================== */
+
+      if (
+        !senhaCorreta
+      ) {
+
+        return res
+          .status(401)
+          .json({
+
+            sucesso:
+              false,
+
+            mensagem:
+              'Email ou senha inválidos.'
+
+          });
+
+      }
+
+
+      /* ========================================
+         CRIAR SESSÃO DO USUÁRIO
+         ======================================== */
+
+      req.session.usuario = {
+
+        id:
+          usuario.id,
+
+        nome:
+          usuario.nome,
+
+        email:
+          usuario.email,
+
+        perfil:
+          usuario.perfil
+
+      };
+
+
+      /* ========================================
+         LOGIN REALIZADO
+         ======================================== */
+
+      res.json({
+
+        sucesso:
+          true,
+
+        mensagem:
+          'Login realizado com sucesso.',
+
+        usuario:
+          req.session.usuario
+
+      });
+
+
+    } catch (error) {
+
+      console.error(
+        'Erro no login:',
+        error
+      );
+
+
+      res
+        .status(500)
+        .json({
+
+          sucesso:
+            false,
+
+          mensagem:
+            'Erro ao realizar login.'
+
+        });
+
+    }
+
+  }
+);
+
+
+/* ========================================
+   VERIFICAR USUÁRIO AUTENTICADO
+   ======================================== */
+
+app.get(
+  '/api/me',
+
+  (req, res) => {
+
+    if (
+      !req.session.usuario
+    ) {
+
+      return res
+        .status(401)
+        .json({
+
+          sucesso:
+            false,
+
+          mensagem:
+            'Não autenticado.'
+
+        });
+
+    }
+
+
+    res.json({
+
+      sucesso:
+        true,
+
+      usuario:
+        req.session.usuario
+
+    });
+
+  }
+);
+
+
+/* ========================================
+   LOGOUT
+   ======================================== */
+
+app.post(
+  '/api/logout',
+
+  (req, res) => {
+
+    req.session.destroy(
+      error => {
+
+        if (error) {
+
+          console.error(
+            'Erro ao encerrar sessão:',
+            error
+          );
+
+
+          return res
+            .status(500)
+            .json({
+
+              sucesso:
+                false,
+
+              mensagem:
+                'Erro ao sair.'
+
+            });
+
+        }
+
+
+        /* ========================================
+           LIMPAR COOKIE DA SESSÃO
+           ======================================== */
+
+        res.clearCookie(
+          'connect.sid'
+        );
+
+
+        /* ========================================
+           LOGOUT REALIZADO
+           ======================================== */
+
+        res.json({
+
+          sucesso:
+            true,
+
+          mensagem:
+            'Logout realizado com sucesso.'
+
+        });
+
+      }
+    );
+
+  }
+);
+
+
+/* ========================================
+   INICIALIZAÇÃO DO SERVIDOR
+   ======================================== */
+
+app.listen(
+  PORT,
+
+  () => {
+
+    console.log(
+      `✅ Servidor rodando em http://localhost:${PORT}`
+    );
+
+  }
+);
