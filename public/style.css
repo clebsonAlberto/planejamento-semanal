@@ -75,7 +75,7 @@
   .day-head .date{font-size:12px; opacity:.9;}
 
   .blocks{
-    padding:12px; display:flex; flex-direction:column; gap:12px; flex:1;
+    padding:12px; display:flex; flex-direction:column; gap:12px; flex: 0 0 auto;
   }
   .empty-hint{
     font-size:13px; color:var(--ink-soft2); text-align:center; padding:18px 8px;
@@ -281,7 +281,7 @@
   .blocks {
   padding: 3px !important;
   gap: 2px !important;
-  flex: 1 !important;
+  flex: 0 0 auto;
   }
 
   .empty-hint {
@@ -585,4 +585,22 @@ textarea.block-text {
   .periodo-row {
     align-items: center;
   }
+
+  /* ========================================
+   AJUSTE DOS BOTÕES ADICIONAR HORÁRIO
+   SOMENTE NA TELA
+   ======================================== */
+
+@media screen {
+
+  .blocks {
+    flex: 0 0 auto;
+  }
+
+  .add-block-btn {
+    margin-top: 0;
+  }
+
+}
+
 }
